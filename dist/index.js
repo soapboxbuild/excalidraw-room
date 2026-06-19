@@ -15,6 +15,7 @@ const socketDebug = (0, debug_1.default)("socket");
 const app = (0, express_1.default)();
 const port = process.env.PORT || (process.env.NODE_ENV !== "development" ? 80 : 3002);
 app.use(express_1.default.static("public"));
+app.use(express_1.default.json({ limit: "10mb" }));
 app.get("/", (req, res) => {
     res.send("Excalidraw collaboration server is up :)");
 });
@@ -22,6 +23,8 @@ const server = http_1.default.createServer(app);
 server.listen(port, () => {
     serverDebug(`listening on port: ${port}`);
 });
+// Separate persist client for scene storage (not pub/sub)
+let persistClient = null;
 try {
     const io = new socket_io_1.Server(server, {
         transports: ["websocket", "polling"],
@@ -34,6 +37,7 @@ try {
     });
     const redisUrl = process.env.REDIS_URL;
     if (redisUrl) {
+        // Pub/sub adapter for horizontal scaling
         const pubClient = (0, redis_1.createClient)({ url: redisUrl });
         const subClient = pubClient.duplicate();
         Promise.all([pubClient.connect(), subClient.connect()])
@@ -45,7 +49,33 @@ try {
             .catch((err) => {
             console.error("[excalidraw-room] Redis adapter connection failed, running without pub/sub:", err);
         });
+        // Separate client for scene persistence
+        persistClient = (0, redis_1.createClient)({ url: redisUrl });
+        persistClient.connect()
+            .then(() => console.log("[excalidraw-room] Persist client connected"))
+            .catch((err) => {
+            console.error("[excalidraw-room] Persist client failed:", err);
+            persistClient = null;
+        });
     }
+    // Seed endpoint — accepts pre-encrypted scene data for a room
+    app.post("/api/seed/:roomID", async (req, res) => {
+        const secret = process.env.SEED_SECRET;
+        if (secret && req.headers["x-seed-secret"] !== secret) {
+            return res.status(401).json({ error: "unauthorized" });
+        }
+        if (!persistClient) {
+            return res.status(503).json({ error: "persistence not configured" });
+        }
+        const { encryptedData, iv } = req.body;
+        if (!encryptedData || !iv) {
+            return res.status(400).json({ error: "encryptedData and iv required" });
+        }
+        const key = `excalidraw:scene:${req.params.roomID}`;
+        await persistClient.set(key, JSON.stringify({ encryptedData, iv }), { EX: 30 * 24 * 60 * 60 });
+        console.log(`[excalidraw-room] Seeded room: ${req.params.roomID}`);
+        res.json({ ok: true });
+    });
     io.on("connection", (socket) => {
         ioDebug("connection established!");
         io.to(`${socket.id}`).emit("init-room");
@@ -54,6 +84,25 @@ try {
             await socket.join(roomID);
             const sockets = await io.in(roomID).fetchSockets();
             if (sockets.length <= 1) {
+                // First in room — try to load persisted scene
+                if (persistClient) {
+                    try {
+                        const saved = await persistClient.get(`excalidraw:scene:${roomID}`);
+                        if (saved) {
+                            const { encryptedData, iv } = JSON.parse(saved);
+                            socket.emit("client-broadcast",
+                                Buffer.from(encryptedData, "base64"),
+                                Buffer.from(iv, "base64")
+                            );
+                            console.log(`[excalidraw-room] Restored scene for room: ${roomID}`);
+                            io.in(roomID).emit("room-user-change", sockets.map((s) => s.id));
+                            return;
+                        }
+                    }
+                    catch (err) {
+                        console.error("[excalidraw-room] Failed to load persisted scene:", err);
+                    }
+                }
                 io.to(`${socket.id}`).emit("first-in-room");
             }
             else {
@@ -62,9 +111,25 @@ try {
             }
             io.in(roomID).emit("room-user-change", sockets.map((socket) => socket.id));
         });
-        socket.on("server-broadcast", (roomID, encryptedData, iv) => {
+        socket.on("server-broadcast", async (roomID, encryptedData, iv) => {
             socketDebug(`${socket.id} sends update to ${roomID}`);
             socket.broadcast.to(roomID).emit("client-broadcast", encryptedData, iv);
+            // Persist scene to Redis
+            if (persistClient) {
+                try {
+                    await persistClient.set(
+                        `excalidraw:scene:${roomID}`,
+                        JSON.stringify({
+                            encryptedData: Buffer.from(encryptedData).toString("base64"),
+                            iv: Buffer.from(iv).toString("base64"),
+                        }),
+                        { EX: 30 * 24 * 60 * 60 }
+                    );
+                }
+                catch (err) {
+                    console.error("[excalidraw-room] Failed to persist scene:", err);
+                }
+            }
         });
         socket.on("server-volatile-broadcast", (roomID, encryptedData, iv) => {
             socketDebug(`${socket.id} sends volatile update to ${roomID}`);
