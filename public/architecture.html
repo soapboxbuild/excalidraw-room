@@ -1,0 +1,1134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Platform Architecture — Soapbox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ground:   #0C1020;
+    --panel:    #131929;
+    --panel-2:  #1A2235;
+    --border:   #243047;
+    --text:     #D4DCE8;
+    --muted:    #8899AA;
+    --accent:   #4B9EFF;
+    --green:    #3EC97B;
+    --amber:    #F0A050;
+    --mono:     'Space Mono', 'Courier New', monospace;
+    --sans:     'Inter', system-ui, sans-serif;
+    --grid-line: rgba(75, 158, 255, 0.055);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { font-size: 15px; }
+
+  body {
+    background-color: var(--ground);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(rgba(75,158,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(75,158,255,0.02) 1px, transparent 1px);
+    background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ─── LAYOUT ─── */
+  .page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 48px 32px 96px;
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 28px;
+    margin-bottom: 56px;
+    gap: 24px;
+  }
+
+  .header-left { flex: 1; }
+
+  .drawing-tag {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .drawing-tag::before {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 1px;
+    background: var(--accent);
+    opacity: 0.6;
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .header-meta {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    line-height: 2;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .header-meta strong { color: var(--text); }
+
+  /* ─── SECTION ─── */
+  .section {
+    margin-bottom: 64px;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section-title {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 24px;
+    letter-spacing: -0.01em;
+  }
+
+  /* ─── SYSTEM DIAGRAM ─── */
+  .system-diagram {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 40px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .system-diagram::before {
+    content: 'DWG. A-001';
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    opacity: 0.5;
+  }
+
+  .sys-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    justify-content: center;
+  }
+
+  .sys-node {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 14px 20px;
+    min-width: 140px;
+    text-align: center;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .sys-node.accent-border { border-color: var(--accent); }
+  .sys-node.green-border  { border-color: var(--green); }
+  .sys-node.amber-border  { border-color: var(--amber); }
+
+  .sys-node-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text);
+    display: block;
+    line-height: 1.3;
+  }
+
+  .sys-node-sub {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    color: var(--muted);
+    display: block;
+    margin-top: 3px;
+    letter-spacing: 0.05em;
+  }
+
+  .sys-node-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  .sys-arrow {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    position: relative;
+    min-width: 40px;
+    max-width: 80px;
+  }
+
+  .sys-arrow::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: -3px;
+    width: 0;
+    height: 0;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    border-left: 6px solid var(--border);
+  }
+
+  .sys-arrow.accent::after { border-left-color: var(--accent); }
+  .sys-arrow.accent { background: var(--accent); opacity: 0.4; }
+  .sys-arrow.green::after  { border-left-color: var(--green); }
+  .sys-arrow.green  { background: var(--green);  opacity: 0.4; }
+
+  .sys-arrow-label {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    color: var(--muted);
+    white-space: nowrap;
+    letter-spacing: 0.06em;
+  }
+
+  .sys-branch {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sys-vert {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  .sys-vert-line {
+    width: 1px;
+    height: 12px;
+    background: var(--border);
+    margin: 0 auto 4px;
+  }
+
+  /* ─── ROUTE MAP ─── */
+  .route-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .route-group {
+    background: var(--panel);
+    padding: 22px 20px;
+    position: relative;
+  }
+
+  .route-group-name {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .route-group-name .pill {
+    background: rgba(75,158,255,0.12);
+    border: 1px solid rgba(75,158,255,0.25);
+    border-radius: 2px;
+    padding: 1px 6px;
+    font-size: 0.55rem;
+  }
+
+  .route-group-name .pill.green {
+    background: rgba(62,201,123,0.1);
+    border-color: rgba(62,201,123,0.25);
+    color: var(--green);
+  }
+
+  .route-tree {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.9;
+    list-style: none;
+  }
+
+  .route-tree li { position: relative; }
+  .route-tree li::before { content: '─ '; color: var(--border); }
+  .route-tree li.indent { padding-left: 16px; }
+  .route-tree li.indent-2 { padding-left: 32px; }
+  .route-tree li.indent-3 { padding-left: 48px; }
+
+  .route-tree .path { color: var(--text); }
+  .route-tree .desc { color: var(--muted); font-size: 0.62rem; margin-left: 4px; }
+  .route-tree .badge {
+    display: inline-block;
+    background: rgba(62,201,123,0.12);
+    border: 1px solid rgba(62,201,123,0.2);
+    color: var(--green);
+    font-size: 0.55rem;
+    padding: 0 4px;
+    border-radius: 1px;
+    margin-left: 4px;
+    vertical-align: middle;
+    letter-spacing: 0.05em;
+  }
+  .route-tree .badge.ai { background: rgba(75,158,255,0.1); border-color: rgba(75,158,255,0.2); color: var(--accent); }
+  .route-tree .badge.amber { background: rgba(240,160,80,0.1); border-color: rgba(240,160,80,0.2); color: var(--amber); }
+
+  /* ─── FLOW DIAGRAM ─── */
+  .flow {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 36px 28px;
+    position: relative;
+  }
+
+  .flow::before {
+    content: 'DWG. A-003';
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    opacity: 0.4;
+    letter-spacing: 0.1em;
+  }
+
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 8px;
+  }
+
+  .flow-box {
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 10px 14px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .flow-box span {
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.67rem;
+    color: var(--text);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .flow-box small {
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.56rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .flow-box.user   { border-color: #5a6a8a; background: rgba(90,106,138,0.15); }
+  .flow-box.client { border-color: var(--accent); background: rgba(75,158,255,0.08); }
+  .flow-box.server { border-color: #6a5a8a; background: rgba(106,90,138,0.12); }
+  .flow-box.ai     { border-color: var(--green); background: rgba(62,201,123,0.08); }
+  .flow-box.tool   { border-color: var(--amber); background: rgba(240,160,80,0.08); }
+
+  .flow-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    position: relative;
+    min-width: 24px;
+  }
+
+  .flow-line::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: -3px;
+    border-top: 3px solid transparent;
+    border-bottom: 3px solid transparent;
+    border-left: 5px solid var(--border);
+  }
+
+  .flow-line .flow-label {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 0.53rem;
+    color: var(--muted);
+    white-space: nowrap;
+    background: var(--panel);
+    padding: 0 4px;
+  }
+
+  .flow-line.sse        { background: var(--green); opacity: 0.5; }
+  .flow-line.sse::after { border-left-color: var(--green); opacity: 1; }
+
+  .flow-sub {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px dashed var(--border);
+  }
+
+  .flow-sub-item {
+    flex: 1;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .flow-sub-item span {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    display: block;
+    line-height: 1.5;
+  }
+
+  .flow-sub-item strong {
+    color: var(--text);
+    display: block;
+    font-size: 0.65rem;
+    margin-bottom: 2px;
+  }
+
+  /* ─── DECISIONS ─── */
+  .decisions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .decision-card {
+    background: var(--panel);
+    padding: 22px 20px;
+  }
+
+  .decision-card.full { grid-column: 1 / -1; }
+
+  .decision-key {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .decision-key .num {
+    color: var(--muted);
+    font-size: 0.58rem;
+  }
+
+  .decision-value {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  .decision-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .decision-desc code {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--text);
+    background: var(--panel-2);
+    padding: 1px 4px;
+    border-radius: 2px;
+  }
+
+  .callout {
+    background: rgba(75,158,255,0.06);
+    border: 1px solid rgba(75,158,255,0.18);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 2px 2px 0;
+    padding: 10px 14px;
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .callout strong { color: var(--accent); }
+
+  .callout.warn {
+    background: rgba(240,160,80,0.06);
+    border-color: rgba(240,160,80,0.2);
+    border-left-color: var(--amber);
+  }
+
+  .callout.warn strong { color: var(--amber); }
+
+  /* ─── DIMENSION ANNOTATION ─── */
+  .dim-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 16px 0 8px;
+    gap: 0;
+  }
+
+  .dim-line {
+    height: 1px;
+    background: var(--border);
+    flex: 1;
+    position: relative;
+  }
+
+  .dim-tick {
+    width: 1px;
+    height: 8px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .dim-label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    padding: 0 10px;
+    flex-shrink: 0;
+    letter-spacing: 0.08em;
+  }
+
+  /* ─── FOOTER ─── */
+  .footer {
+    margin-top: 72px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .footer-text {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  .footer-text a { color: var(--accent); text-decoration: none; }
+  .footer-text a:hover { text-decoration: underline; }
+
+  .stamp {
+    border: 1px solid var(--border);
+    padding: 10px 16px;
+    border-radius: 2px;
+    text-align: center;
+  }
+
+  .stamp-text {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--green);
+    display: block;
+    line-height: 1.8;
+  }
+
+  .stamp-label {
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    color: var(--muted);
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* ─── MODEL ROUTING INSET ─── */
+  .model-grid {
+    display: flex;
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+
+  .model-cell {
+    flex: 1;
+    background: var(--panel-2);
+    padding: 10px 12px;
+    text-align: center;
+  }
+
+  .model-name {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text);
+    display: block;
+  }
+
+  .model-trigger {
+    font-family: var(--mono);
+    font-size: 0.56rem;
+    color: var(--muted);
+    display: block;
+    margin-top: 3px;
+    line-height: 1.5;
+  }
+
+  /* ─── LIVE BADGE ─── */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  .live-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s ease-in-out infinite;
+    margin-right: 5px;
+    vertical-align: middle;
+    box-shadow: 0 0 4px var(--green);
+  }
+
+  @media (max-width: 700px) {
+    .route-grid, .decisions-grid { grid-template-columns: 1fr; }
+    .decision-card.full { grid-column: 1; }
+    .sys-row { flex-direction: column; }
+    .sys-arrow { width: 1px; height: 32px; min-width: 0; max-width: none; }
+    .sys-arrow::after {
+      right: -3px; top: auto; bottom: -1px;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 6px solid var(--border);
+    }
+    h1 { font-size: 1.25rem; }
+    .header { flex-direction: column; }
+    .header-meta { text-align: left; }
+    .flow-sub { flex-wrap: wrap; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-dot { animation: none; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <p class="drawing-tag">Soapbox Platform · Technical Architecture</p>
+      <h1>platform<span>.</span>soapbox<span>.</span>build<br>Next.js 15 Rebuild</h1>
+    </div>
+    <div class="header-meta">
+      <strong>Rev A · 2026-06-19</strong><br>
+      Scale: not to scale<br>
+      Drawn: Claude Code<br>
+      Checked: —<br>
+      Status: <span style="color:var(--green)">●</span> In design
+    </div>
+  </header>
+
+
+  <!-- SECTION 1: SYSTEM OVERVIEW -->
+  <section class="section">
+    <p class="section-label">Sheet A-001 — System Overview</p>
+    <div class="system-diagram">
+
+      <!-- Top row: Browser → Next.js → (fork) → Supabase / API → Claude -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;">
+
+        <div class="sys-node">
+          <span class="sys-node-label">Browser</span>
+          <span class="sys-node-sub">React Client</span>
+        </div>
+
+        <div class="sys-arrow accent" style="position:relative;">
+          <span class="sys-arrow-label">HTTPS</span>
+        </div>
+
+        <div class="sys-node accent-border" style="min-width:160px;">
+          <div class="sys-node-dot"></div>
+          <span class="sys-node-label">Next.js 15</span>
+          <span class="sys-node-sub">App Router · Vercel</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;margin-left:0;">
+          <div style="display:flex;align-items:center;gap:0;">
+            <div class="sys-arrow" style="min-width:40px;">
+              <span class="sys-arrow-label">RSC / Server Action</span>
+            </div>
+            <div class="sys-node green-border">
+              <span class="sys-node-label">Supabase</span>
+              <span class="sys-node-sub">Auth + Postgres DB</span>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:0;">
+            <div class="sys-arrow accent" style="min-width:40px;">
+              <span class="sys-arrow-label">POST /chat/stream</span>
+            </div>
+            <div class="sys-node accent-border">
+              <span class="sys-node-label">Soapbox API</span>
+              <span class="sys-node-sub">Railway · Node.js</span>
+            </div>
+            <div class="sys-arrow green" style="min-width:32px;">
+              <span class="sys-arrow-label">SSE stream</span>
+            </div>
+            <div class="sys-node" style="border-color:#9a7fd4;background:rgba(154,127,212,0.1);">
+              <span class="sys-node-label">Anthropic</span>
+              <span class="sys-node-sub">Claude 4.x · streaming</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="dim-row" style="margin-top:32px;">
+        <div class="dim-tick"></div>
+        <div class="dim-line"></div>
+        <div class="dim-label">EXTERNAL BOUNDARY</div>
+        <div class="dim-line"></div>
+        <div class="dim-tick"></div>
+      </div>
+
+      <div style="display:flex;gap:16px;margin-top:16px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:180px;border:1px dashed var(--border);padding:12px;border-radius:2px;">
+          <p style="font-family:var(--mono);font-size:0.62rem;color:var(--accent);margin-bottom:6px;letter-spacing:0.1em;">TOOLS CALLED BY CLAUDE</p>
+          <p style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);line-height:1.9;">
+            audette__ · Property data + energy reports<br>
+            espm__ · ENERGY STAR Portfolio Manager<br>
+            crrem__ · Carbon risk / CRREM pathway<br>
+            web_search · Live web context<br>
+            files__ · Asset document RAG<br>
+            memory__ · Hindsight cross-session recall
+          </p>
+        </div>
+        <div style="flex:1;min-width:180px;border:1px dashed var(--border);padding:12px;border-radius:2px;">
+          <p style="font-family:var(--mono);font-size:0.62rem;color:var(--green);margin-bottom:6px;letter-spacing:0.1em;">PERSISTENCE LAYER</p>
+          <p style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);line-height:1.9;">
+            Supabase Postgres · All structured data<br>
+            Supabase Storage · Uploaded files<br>
+            pgvector · RAG embeddings<br>
+            Hindsight · Agent cross-session memory<br>
+            Valkey · Draw room persistence
+          </p>
+        </div>
+        <div style="flex:1;min-width:180px;border:1px dashed var(--border);padding:12px;border-radius:2px;">
+          <p style="font-family:var(--mono);font-size:0.62rem;color:var(--amber);margin-bottom:6px;letter-spacing:0.1em;">INTEGRATIONS</p>
+          <p style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);line-height:1.9;">
+            Stripe · Billing + subscription<br>
+            Audette · CRE property data<br>
+            ENERGY STAR · EPA benchmarking<br>
+            Overture Maps · Building footprints<br>
+            Nominatim · Address geocoding
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- SECTION 2: APP ROUTER -->
+  <section class="section">
+    <p class="section-label">Sheet A-002 — App Router Structure</p>
+    <p style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-bottom:20px;">
+      Middleware at root redirects unauthenticated → <code style="color:var(--text);background:var(--panel);padding:1px 4px;">/login</code>.
+      Redirects authenticated from auth routes → <code style="color:var(--text);background:var(--panel);padding:1px 4px;">/portfolio</code>.
+    </p>
+
+    <div class="route-grid">
+
+      <!-- Auth group -->
+      <div class="route-group">
+        <p class="route-group-name">
+          (auth) group
+          <span class="pill">No session required</span>
+        </p>
+        <ul class="route-tree">
+          <li><span class="path">/login</span> <span class="desc">Email + password</span></li>
+          <li><span class="path">/signup</span> <span class="desc">Create org + portfolio</span></li>
+        </ul>
+        <div class="callout" style="margin-top:16px;">
+          <strong>Note:</strong> layout.tsx for (auth) is the centered card shell.
+          No sidebar, no session cookie required.
+        </div>
+      </div>
+
+      <!-- App shell -->
+      <div class="route-group">
+        <p class="route-group-name">
+          (app) layout
+          <span class="pill green">Session required</span>
+        </p>
+        <ul class="route-tree">
+          <li><span class="path">layout.tsx</span></li>
+          <li class="indent"><span class="desc">Sidebar nav — portfolio / assets / settings</span></li>
+          <li class="indent"><span class="desc">Org + user context from Supabase server session</span></li>
+          <li class="indent"><span class="desc">Billing suspension banner when past_due</span></li>
+          <li class="indent"><span class="desc">Brand CSS vars injected from org.branding</span></li>
+        </ul>
+      </div>
+
+      <!-- Portfolio routes -->
+      <div class="route-group">
+        <p class="route-group-name">/portfolio — Dashboard</p>
+        <ul class="route-tree">
+          <li><span class="path">page</span> <span class="desc">Asset grid + thread summary</span></li>
+          <li><span class="path">threads/[threadId]</span> <span class="badge ai">AI</span></li>
+          <li class="indent"><span class="desc">Portfolio-level chat · streams from API</span></li>
+          <li class="indent"><span class="desc">Artifacts, pinning, markdown export</span></li>
+          <li><span class="path">policies</span></li>
+          <li class="indent"><span class="desc">Upload reference docs → portfolio RAG index</span></li>
+          <li class="indent"><span class="desc">Live indexing status via EventSource</span></li>
+        </ul>
+      </div>
+
+      <!-- Asset routes -->
+      <div class="route-group">
+        <p class="route-group-name">/assets — Per-property workspace</p>
+        <ul class="route-tree">
+          <li><span class="path">page</span> <span class="desc">Asset list + add modal</span></li>
+          <li><span class="path">[id]/page</span> <span class="desc">Thread list + suggested prompts</span></li>
+          <li><span class="path">[id]/chat/[convId]</span> <span class="badge ai">AI</span></li>
+          <li class="indent"><span class="desc">/ # skills · @ docs · model routing</span></li>
+          <li><span class="path">[id]/files</span></li>
+          <li class="indent"><span class="desc">Upload → RAG index · SSE indexing status</span></li>
+          <li><span class="path">[id]/financials</span></li>
+          <li class="indent"><span class="desc">Cash flow waterfall · scenarios · versions</span></li>
+          <li><span class="path">[id]/dashboards</span></li>
+          <li class="indent"><span class="desc">Pinned AI-generated HTML artifacts</span></li>
+          <li><span class="path">[id]/recurring-tasks</span> <span class="badge amber">CRON</span></li>
+          <li class="indent"><span class="desc">Loop creation · run history · sparkline</span></li>
+          <li><span class="path">[id]/settings</span></li>
+          <li class="indent"><span class="desc">Name · Audette link · ESPM link · system prompt</span></li>
+        </ul>
+      </div>
+
+      <!-- Settings + Admin -->
+      <div class="route-group">
+        <p class="route-group-name">/settings — Org configuration</p>
+        <ul class="route-tree">
+          <li><span class="path">page</span> <span class="desc">Navigation hub</span></li>
+          <li><span class="path">billing</span> <span class="desc">Stripe portal / checkout</span></li>
+          <li><span class="path">branding</span></li>
+          <li class="indent"><span class="desc">Logo upload → palette extraction</span></li>
+          <li class="indent"><span class="desc">Brand hex → CSS vars → report embeds</span></li>
+          <li><span class="path">consumption</span></li>
+          <li class="indent"><span class="desc">Token usage by type / day / model</span></li>
+        </ul>
+      </div>
+
+      <!-- Admin -->
+      <div class="route-group">
+        <p class="route-group-name">/admin — Portfolio analytics</p>
+        <ul class="route-tree">
+          <li><span class="path">page</span></li>
+          <li class="indent"><span class="desc">Daily token chart (30d) by asset</span></li>
+          <li class="indent"><span class="desc">Model breakdown table</span></li>
+          <li class="indent"><span class="desc">Members table · billing allowance bar</span></li>
+        </ul>
+        <div class="callout warn" style="margin-top:16px;">
+          <strong>Bug:</strong> RLS infinite recursion on organization_members.
+          Fix: replace recursive policy with security definer function.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- SECTION 3: CHAT FLOW -->
+  <section class="section">
+    <p class="section-label">Sheet A-003 — AI Chat Data Flow</p>
+    <p class="section-title">asset/[id]/chat/[convId]</p>
+
+    <div class="flow">
+
+      <!-- Row 1: User → Composer → Server Action -->
+      <div class="flow-row">
+        <div class="flow-box user" style="width:90px;">
+          <span>User</span>
+          <small>types message</small>
+        </div>
+        <div class="flow-line">
+          <span class="flow-label">submit / Enter</span>
+        </div>
+        <div class="flow-box client" style="width:130px;">
+          <span>ChatComposer</span>
+          <small>/ # @ pickers</small>
+        </div>
+        <div class="flow-line">
+          <span class="flow-label">Server Action</span>
+        </div>
+        <div class="flow-box server" style="width:130px;">
+          <span>route.ts</span>
+          <small>POST /chat/stream</small>
+        </div>
+        <div class="flow-line">
+          <span class="flow-label">with system prompt + docs</span>
+        </div>
+        <div class="flow-box ai" style="width:130px;">
+          <span>Claude</span>
+          <small>adaptive model</small>
+        </div>
+      </div>
+
+      <!-- Row 2: stream back -->
+      <div class="flow-row" style="justify-content:flex-end;margin-top:4px;">
+        <div class="flow-box client" style="width:130px;">
+          <span>ChatThread</span>
+          <small>EventSource · useChat</small>
+        </div>
+        <div class="flow-line sse" style="flex-direction:row-reverse;">
+          <span class="flow-label" style="right:auto;left:50%;">SSE stream ←</span>
+        </div>
+        <div class="flow-box server" style="width:130px;">
+          <span>ReadableStream</span>
+          <small>Vercel streaming</small>
+        </div>
+        <div class="flow-line sse" style="flex-direction:row-reverse;">
+          <span class="flow-label" style="right:auto;left:50%;">token stream ←</span>
+        </div>
+        <div class="flow-box ai" style="width:130px;">
+          <span>Claude</span>
+          <small>yields delta chunks</small>
+        </div>
+      </div>
+
+      <!-- Adaptive model routing -->
+      <div style="margin-top:24px;">
+        <p style="font-family:var(--mono);font-size:0.62rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Adaptive Model Routing</p>
+        <div class="model-grid">
+          <div class="model-cell">
+            <span class="model-name">Haiku 4.5</span>
+            <span class="model-trigger">≤ 8 words · quick q&amp;a</span>
+          </div>
+          <div class="model-cell">
+            <span class="model-name">Sonnet 4.6</span>
+            <span class="model-trigger">default · most tasks</span>
+          </div>
+          <div class="model-cell">
+            <span class="model-name">Opus 4.8</span>
+            <span class="model-trigger">armed skill · 4+ tool calls</span>
+          </div>
+          <div class="model-cell">
+            <span class="model-name">User override</span>
+            <span class="model-trigger">model picker in footer</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-systems -->
+      <div class="flow-sub">
+        <div class="flow-sub-item">
+          <strong>ActivityStream</strong>
+          <span>Renders thinking blocks, tool call pairs, sub-agent threads inline in the message</span>
+        </div>
+        <div class="flow-sub-item">
+          <strong>ArtifactRenderer</strong>
+          <span>HTML dashboards in sandboxed iframe. Pin to /dashboards.</span>
+        </div>
+        <div class="flow-sub-item">
+          <strong>Skill picker (#)</strong>
+          <span>Arms a skill plugin, forces Opus, injects skill system prompt</span>
+        </div>
+        <div class="flow-sub-item">
+          <strong>Doc picker (@)</strong>
+          <span>Injects file content as user-side context block before sending</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- SECTION 4: KEY DECISIONS -->
+  <section class="section">
+    <p class="section-label">Sheet A-004 — Key Architectural Decisions</p>
+
+    <div class="decisions-grid">
+
+      <div class="decision-card">
+        <p class="decision-key"><span class="num">01</span> Auth strategy</p>
+        <p class="decision-value">Supabase SSR — server-side session via cookies</p>
+        <p class="decision-desc">
+          Use <code>@supabase/ssr</code> with <code>createServerClient()</code> in every Server Component and route handler.
+          Middleware reads the cookie on every request and refreshes the token transparently.
+          No localStorage, no client-side auth state.
+        </p>
+        <div class="callout warn">
+          <strong>Fix required:</strong> Drop the recursive RLS policy on <code>organization_members</code>.
+          Replace with a <code>SECURITY DEFINER</code> function to break the cycle.
+        </div>
+      </div>
+
+      <div class="decision-card">
+        <p class="decision-key"><span class="num">02</span> Data fetching</p>
+        <p class="decision-value">Server Components + Server Actions — no client waterfalls</p>
+        <p class="decision-desc">
+          Pages fetch data at request time via <code>createServerClient()</code> directly in the RSC.
+          Mutations use Server Actions (<code>'use server'</code>) so there's no API route boilerplate.
+          AI streaming is the only exception — <code>useChat</code> from AI SDK handles the EventSource on the client.
+        </p>
+      </div>
+
+      <div class="decision-card">
+        <p class="decision-key"><span class="num">03</span> Component system</p>
+        <p class="decision-value">shadcn/ui on Radix — no third-party component lock-in</p>
+        <p class="decision-desc">
+          shadcn copies source into the repo rather than wrapping a library.
+          Tailwind CSS for all utility styling. CSS variables for org brand colours injected by the <code>(app)/layout.tsx</code> on every render from <code>org.branding</code>.
+          Storybook at <code>components.soapbox.build</code> for component isolation and design review.
+        </p>
+      </div>
+
+      <div class="decision-card">
+        <p class="decision-key"><span class="num">04</span> AI streaming</p>
+        <p class="decision-value">Vercel streaming response → EventSource → useChat</p>
+        <p class="decision-desc">
+          The Next.js <code>app/api/chat/route.ts</code> proxies to the Soapbox API and returns a <code>ReadableStream</code>.
+          Vercel streams this via chunked transfer. The client uses <code>useChat</code> from <code>@ai-sdk/react</code>.
+          Artifacts are rendered in a sandboxed <code>&lt;iframe&gt;</code> to prevent XSS from AI-generated HTML.
+        </p>
+      </div>
+
+      <div class="decision-card full">
+        <p class="decision-key"><span class="num">05</span> File upload + RAG indexing</p>
+        <p class="decision-value">Direct multipart to Soapbox API → chunked + embedded → pgvector search</p>
+        <p class="decision-desc">
+          Files are uploaded via the Soapbox API (not directly to Supabase Storage) so the server can chunk, embed, and index them immediately.
+          Indexing status is streamed back to the client via EventSource (<code>/api/indexing-status/:fileId</code>) — the UI shows a live progress indicator per file.
+          Retrieval uses pgvector nearest-neighbour search at query time, injected into the agent's context window.
+        </p>
+        <div class="callout">
+          <strong>Portfolio policies:</strong> docs uploaded here are available to ALL asset agents in the org via the shared portfolio RAG index.
+          Per-asset docs are scoped to that asset's conversations only.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- DIM ANNOTATION -->
+  <div class="dim-row" style="margin:48px 0 0;">
+    <div class="dim-tick"></div>
+    <div class="dim-line"></div>
+    <div class="dim-label">END OF DRAWINGS · REV A</div>
+    <div class="dim-line"></div>
+    <div class="dim-tick"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-text">
+      Source: <a href="https://github.com/soapboxbuild/platform-web" target="_blank" rel="noopener">soapboxbuild/platform-web</a><br>
+      Diagram file: <a href="/architecture.excalidraw" target="_blank">architecture.excalidraw</a> — open in <a href="https://draw.soapbox.build" target="_blank" rel="noopener">draw.soapbox.build</a> to edit<br>
+      Update this page: push to <code>soapboxbuild/excalidraw-room</code> → <code>public/architecture.html</code>
+    </div>
+    <div class="stamp">
+      <span class="stamp-text">
+        <span class="live-dot"></span>
+        LIVE · Railway
+      </span>
+      <span class="stamp-label">draw-rooms.soapbox.build</span>
+    </div>
+  </footer>
+
+</main>
+</body>
+</html>
