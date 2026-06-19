@@ -8,6 +8,7 @@ RUN yarn --frozen-lockfile
 COPY tsconfig.json ./
 COPY src ./src
 RUN yarn build
+USER node
 
 EXPOSE 80
 CMD ["yarn", "start"]

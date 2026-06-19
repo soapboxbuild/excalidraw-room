@@ -58,10 +58,10 @@ try {
     Promise.all([pubClient.connect(), subClient.connect()])
       .then(() => {
         io.adapter(createAdapter(pubClient, subClient));
-        serverDebug("Redis adapter active on %s", redisUrl);
+        console.log("[excalidraw-room] Redis adapter active on %s", redisUrl);
       })
       .catch((err: Error) => {
-        console.error("Redis adapter connection failed:", err);
+        console.error("[excalidraw-room] Redis adapter connection failed:", err);
         process.exit(1);
       });
   }
