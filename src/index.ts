@@ -58,7 +58,8 @@ try {
     Promise.all([pubClient.connect(), subClient.connect()])
       .then(() => {
         io.adapter(createAdapter(pubClient, subClient));
-        console.log("[excalidraw-room] Redis adapter active on %s", redisUrl);
+        const safeUrl = redisUrl.replace(/:\/\/[^@]+@/, '://<redacted>@');
+        console.log("[excalidraw-room] Redis adapter active on %s", safeUrl);
       })
       .catch((err: Error) => {
         console.error("[excalidraw-room] Redis adapter connection failed, running without pub/sub:", err);
