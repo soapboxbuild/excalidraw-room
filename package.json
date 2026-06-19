@@ -37,5 +37,5 @@
     "test:other": "yarn prettier --list-different",
     "test": "yarn test:other && yarn test:code"
   },
-  "version": "1.0.0"
+  "version": "1.0.1"
 }
