@@ -3,11 +3,9 @@ FROM node:20-alpine
 WORKDIR /excalidraw-room
 
 COPY package.json yarn.lock ./
-RUN yarn --frozen-lockfile
+RUN yarn --frozen-lockfile --production
 
-COPY tsconfig.json ./
-COPY src ./src
-RUN yarn build
+COPY dist ./dist
 USER node
 
 EXPOSE 80
