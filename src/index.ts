@@ -61,8 +61,7 @@ try {
         console.log("[excalidraw-room] Redis adapter active on %s", redisUrl);
       })
       .catch((err: Error) => {
-        console.error("[excalidraw-room] Redis adapter connection failed:", err);
-        process.exit(1);
+        console.error("[excalidraw-room] Redis adapter connection failed, running without pub/sub:", err);
       });
   }
 
